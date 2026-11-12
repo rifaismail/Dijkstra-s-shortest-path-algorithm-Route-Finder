@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Campus Route Finder - Dijkstra's Algorithm</title>
+<style>
+  :root {
+    --bg:#eef2f9; --card:#ffffff; --ink:#16213a; --muted:#64708a; --line:#e1e7f2;
+    --primary:#3b5bdb; --primary-d:#2c46b0; --orange:#f08c00; --green:#12a150; --soft:#edf1ff;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); line-height:1.6;
+    font-family:"Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif; }
+
+  .hero { position:relative; overflow:hidden; color:#fff; text-align:center; padding:64px 20px 96px;
+    background:linear-gradient(135deg,#1c2b6b 0%,#3b5bdb 55%,#5f3dc4 100%); }
+  .hero::before, .hero::after { content:""; position:absolute; border-radius:50%; background:rgba(255,255,255,.08); }
+  .hero::before { width:340px; height:340px; top:-140px; left:-90px; }
+  .hero::after { width:260px; height:260px; bottom:-120px; right:-60px; }
+  .badge { display:inline-block; padding:5px 16px; border-radius:999px; background:rgba(255,255,255,.16);
+    font-size:.85rem; letter-spacing:.08em; text-transform:uppercase; margin-bottom:16px; }
+  .hero h1 { margin:0 0 10px; font-size:clamp(2rem,5vw,3.2rem); letter-spacing:-.02em; position:relative; }
+  .hero p { margin:0 auto; max-width:620px; color:#dbe2ff; font-size:1.1rem; position:relative; }
+  .chips { margin-top:22px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; position:relative; }
+  .chips span { background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.25);
+    padding:6px 14px; border-radius:999px; font-size:.9rem; }
+
+  main { max-width:1040px; margin:-56px auto 0; padding:0 16px 40px; position:relative; }
+  .card { background:var(--card); border-radius:18px; padding:26px; margin-bottom:24px;
+    box-shadow:0 10px 30px rgba(28,43,107,.10); border:1px solid var(--line); }
+  h2 { margin:0 0 6px; font-size:1.5rem; }
+  .sub { color:var(--muted); margin:0 0 18px; }
+
+  .controls { display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin-bottom:16px; }
+  label { display:flex; flex-direction:column; font-size:.78rem; font-weight:600; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.06em; gap:5px; }
+  select { font:inherit; font-size:1rem; padding:10px 14px; border:1.5px solid var(--line); border-radius:10px;
+    background:#fff; color:var(--ink); min-width:170px; }
+  select:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(59,91,219,.18); }
+  button { font:inherit; font-weight:600; font-size:1rem; padding:10px 20px; border-radius:10px; border:none;
+    cursor:pointer; transition:transform .1s, box-shadow .2s, background .2s; }
+  button:hover:not(:disabled) { transform:translateY(-1px); }
+  .b-primary { background:var(--primary); color:#fff; box-shadow:0 4px 12px rgba(59,91,219,.35); }
+  .b-primary:hover:not(:disabled) { background:var(--primary-d); }
+  .b-green { background:var(--green); color:#fff; box-shadow:0 4px 12px rgba(18,161,80,.3); }
+  .b-ghost { background:#fff; color:var(--ink); border:1.5px solid var(--line); }
+  button:disabled { opacity:.45; cursor:default; box-shadow:none; }
+
+  .mapwrap { border-radius:14px; border:1px solid var(--line); overflow:hidden;
+    background:radial-gradient(circle at 1px 1px,#d6def0 1px,transparent 0) 0 0/24px 24px, #f8faff; }
+  svg { display:block; width:100%; height:auto; }
+  .edge { stroke:#b4bfd6; stroke-width:4; stroke-linecap:round; transition:stroke .25s; }
+  .edge.relax { stroke:var(--orange); stroke-width:6; }
+  .edge.path { stroke:var(--green); stroke-width:8; }
+  .wbox { fill:#fff; stroke:var(--line); }
+  .ewt { font-size:13px; font-weight:600; fill:#4a5673; text-anchor:middle; }
+  .node circle { fill:#fff; stroke:#8e9bb8; stroke-width:3; transition:all .25s;
+    filter:drop-shadow(0 3px 5px rgba(28,43,107,.18)); }
+  .node.done circle { fill:var(--soft); stroke:var(--primary); }
+  .node.current circle { fill:#fff3dc; stroke:var(--orange); stroke-width:5; }
+  .node.path circle { fill:#dcf7e7; stroke:var(--green); stroke-width:5; }
+  .node.src circle { stroke-dasharray:0; stroke-width:6; }
+  .node .label { font-size:13px; font-weight:600; fill:var(--ink); paint-order:stroke;
+    stroke:#f8faff; stroke-width:4px; }
+  .node .dist { font-size:14px; font-weight:700; text-anchor:middle; fill:var(--primary-d); }
+
+  .legend { display:flex; gap:18px; flex-wrap:wrap; margin:14px 2px 0; font-size:.88rem; color:var(--muted); }
+  .dot { display:inline-block; width:13px; height:13px; border-radius:50%; border:3px solid; margin-right:6px; vertical-align:-2px; }
+
+  #log { margin:16px 0; padding:14px 18px; border-radius:12px; background:var(--soft);
+    border-left:5px solid var(--primary); min-height:3.4em; }
+
+  .grid2 { display:grid; grid-template-columns:1.3fr 1fr; gap:20px; }
+  h3 { margin:0 0 10px; font-size:1rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+  table { width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  th, td { padding:9px 14px; text-align:left; border-bottom:1px solid var(--line); }
+  th { background:#f3f6fd; font-size:.82rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  tr:last-child td { border-bottom:none; }
+  .resbox { border-radius:14px; padding:18px; background:linear-gradient(135deg,#e6f9ee,#f3fff8); border:1px solid #bfe9d0;
+    margin-bottom:20px; min-height:110px; }
+  .resbox .big { font-size:2rem; font-weight:800; color:var(--green); line-height:1.1; }
+  .resbox .route { margin-top:6px; color:#27573d; font-weight:600; }
+  .empty { color:var(--muted); }
+  .pq { display:flex; flex-wrap:wrap; gap:8px; }
+  .pq span { background:var(--soft); color:var(--primary-d); padding:5px 12px; border-radius:999px; font-size:.88rem; font-weight:600; }
+
+  footer { text-align:center; color:var(--muted); padding:10px 16px 40px; font-size:.92rem; }
+  @media (max-width:760px) { .grid2 { grid-template-columns:1fr; } select { min-width:140px; } .hero { padding:44px 16px 84px; } }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  
+  <h1>Campus Route Finder</h1>
+  <p>Find the shortest walking route between any two places on campus using Dijkstra's Algorithm.</p>
+  <div class="chips">
+    <span>Weighted Graph</span><span>Adjacency List</span><span>Priority Queue</span><span>O((V + E) log V)</span>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>About the Project</h2>
+    <p class="sub">The campus is modelled as a weighted graph: every building is a vertex and every road is an edge whose weight is the walking distance in metres. Dijkstra's algorithm uses a min-heap priority queue to always process the closest unvisited place first.</p>
+  </section>
+
+  <section class="card">
+    <h2>Interactive Route Finder</h2>
+    <p class="sub">Pick a source and a destination, then press <b>Step</b> to watch the algorithm work, or <b>Run all</b> to jump to the answer.</p>
+
+    <div class="controls">
+      <label>From <select id="src"></select></label>
+      <label>To <select id="dst"></select></label>
+      <button id="step" class="b-primary">Step</button>
+      <button id="run" class="b-green">Run all</button>
+      <button id="reset" class="b-ghost">Reset</button>
+    </div>
+
+    <div class="mapwrap"><svg id="map" viewBox="0 0 800 500" role="img" aria-label="Campus graph"></svg></div>
+
+    <div class="legend">
+      <span><i class="dot" style="border-color:#3b5bdb;background:#edf1ff"></i>Finalised</span>
+      <span><i class="dot" style="border-color:#f08c00;background:#fff3dc"></i>Being processed</span>
+      <span><i class="dot" style="border-color:#12a150;background:#dcf7e7"></i>Shortest route</span>
+    </div>
+
+    <div id="log">Choose a source and destination, then press <b>Step</b> or <b>Run all</b>.</div>
+
+    <div class="grid2">
+      <div>
+        <h3>Distance table</h3>
+        <table id="tbl"></table>
+      </div>
+      <div>
+        <h3>Result</h3>
+        <div class="resbox" id="result"><span class="empty">The shortest route will appear here.</span></div>
+        <h3>Priority queue</h3>
+        <div class="pq" id="pq"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+
+
+<script>
+const NODES = [
+  {n:"Main Gate",x:90,y:250,ly:48},{n:"Admin Block",x:230,y:100,ly:-40},{n:"Library",x:300,y:290,ly:48},
+  {n:"IT Block",x:490,y:110,ly:-40},{n:"Canteen",x:470,y:400,ly:48},{n:"Auditorium",x:600,y:200,lx:38,ly:5,a:"start"},
+  {n:"Hostel",x:620,y:440,ly:48},{n:"Sports Complex",x:740,y:340,ly:-40}
+];
+const EDGES = [[0,1,150],[0,2,300],[1,2,120],[1,3,250],[2,3,100],[2,4,200],[3,5,180],[4,6,140],[4,5,160],[5,7,220],[6,7,260]];
+const V = NODES.length, INF = Infinity;
+const adj = NODES.map(()=>[]);
+EDGES.forEach(([u,v,w])=>{ adj[u].push([v,w]); adj[v].push([u,w]); });
+
+const svg = document.getElementById('map');
+const NS = "http://www.w3.org/2000/svg";
+const srcSel = document.getElementById('src'), dstSel = document.getElementById('dst');
+NODES.forEach((o,i)=>{ srcSel.add(new Option(o.n,i)); dstSel.add(new Option(o.n,i)); });
+srcSel.value = 0; dstSel.value = 6;
+
+function el(name, attrs, parent){ const e=document.createElementNS(NS,name); for(const k in attrs) e.setAttribute(k,attrs[k]); (parent||svg).appendChild(e); return e; }
+const edgeEls = [], nodeEls = [];
+EDGES.forEach(([u,v])=>{ edgeEls.push(el('line',{class:'edge',x1:NODES[u].x,y1:NODES[u].y,x2:NODES[v].x,y2:NODES[v].y})); });
+EDGES.forEach(([u,v,w])=>{
+  const mx=(NODES[u].x+NODES[v].x)/2, my=(NODES[u].y+NODES[v].y)/2;
+  el('rect',{class:'wbox',x:mx-18,y:my-11,width:36,height:22,rx:11});
+  const t = el('text',{class:'ewt',x:mx,y:my+4.5}); t.textContent = w;
+});
+NODES.forEach((o,i)=>{
+  const g = el('g',{class:'node'});
+  el('circle',{cx:o.x,cy:o.y,r:27},g);
+  const d = el('text',{class:'dist',x:o.x,y:o.y+5},g);
+  const t = el('text',{class:'label',x:o.x+(o.lx||0),y:o.y+o.ly,'text-anchor':o.a||'middle'},g); t.textContent = o.n;
+  nodeEls.push({g,d});
+});
+const edgeIndex = (a,b)=>EDGES.findIndex(([u,v])=>(u===a&&v===b)||(u===b&&v===a));
+
+let st;
+function reset(){
+  st = { dist:Array(V).fill(INF), parent:Array(V).fill(-1), done:Array(V).fill(false), pq:[], finished:false };
+  const s = +srcSel.value;
+  st.dist[s] = 0; st.pq.push([0,s]);
+  render(-1);
+  document.getElementById('log').innerHTML = 'Every distance starts at infinity. The source is set to 0 and pushed into the priority queue.';
+  document.getElementById('result').innerHTML = '<span class="empty">The shortest route will appear here.</span>';
+  document.getElementById('step').disabled = false; document.getElementById('run').disabled = false;
+}
+function path(t){ const p=[]; for(let x=t;x!==-1;x=st.parent[x]) p.push(x); return p.reverse(); }
+
+function stepOnce(){
+  if(st.finished) return;
+  st.pq.sort((a,b)=>a[0]-b[0]);
+  let item;
+  do { item = st.pq.shift(); } while(item && item[0] > st.dist[item[1]]);
+  if(!item){ finish(); return; }
+  const [d,u] = item; st.done[u] = true;
+  const notes=[];
+  adj[u].forEach(([v,w])=>{
+    if(st.dist[u]+w < st.dist[v]){
+      notes.push(`${NODES[v].n}: ${st.dist[v]===INF?'&infin;':st.dist[v]} &rarr; ${st.dist[u]+w}`);
+      st.dist[v] = st.dist[u]+w; st.parent[v] = u; st.pq.push([st.dist[v],v]);
+    }
+  });
+  render(u);
+  document.getElementById('log').innerHTML = `Pop <b>${NODES[u].n}</b> (${d} m). ` + (notes.length ? 'Updated: '+notes.join('; ')+'.' : 'No shorter routes found.');
+  if(u === +dstSel.value) finish();
+}
+function finish(){
+  st.finished = true;
+  const t = +dstSel.value, p = path(t);
+  render(-1, p);
+  document.getElementById('result').innerHTML =
+    `<div class="big">${st.dist[t]} m</div><div class="route">${p.map(i=>NODES[i].n).join(' &rarr; ')}</div>`;
+  document.getElementById('log').innerHTML += ' <b>Destination reached - shortest route highlighted.</b>';
+  document.getElementById('step').disabled = true; document.getElementById('run').disabled = true;
+}
+function render(cur, pathNodes){
+  const onPath = new Set(pathNodes||[]);
+  edgeEls.forEach(e=>e.setAttribute('class','edge'));
+  if(pathNodes) for(let i=0;i<pathNodes.length-1;i++) edgeEls[edgeIndex(pathNodes[i],pathNodes[i+1])].setAttribute('class','edge path');
+  else if(cur>=0) adj[cur].forEach(([v])=>edgeEls[edgeIndex(cur,v)].setAttribute('class','edge relax'));
+  nodeEls.forEach((o,i)=>{
+    let c='node';
+    if(st.done[i]) c+=' done';
+    if(i===cur) c+=' current';
+    if(onPath.has(i)) c+=' path';
+    if(i===+srcSel.value) c+=' src';
+    o.g.setAttribute('class',c);
+    o.d.textContent = st.dist[i]===INF ? '' : st.dist[i];
+  });
+  let h='<tr><th>Location</th><th>Distance</th><th>Came from</th></tr>';
+  NODES.forEach((o,i)=>{ h+=`<tr><td>${o.n}</td><td>${st.dist[i]===INF?'&infin;':st.dist[i]+' m'}</td><td>${st.parent[i]<0?'-':NODES[st.parent[i]].n}</td></tr>`; });
+  document.getElementById('tbl').innerHTML = h;
+  const q = [...st.pq].sort((a,b)=>a[0]-b[0]);
+  document.getElementById('pq').innerHTML = q.length ? q.map(([d,v])=>`<span>${NODES[v].n} (${d})</span>`).join('') : '<span class="empty" style="background:none">empty</span>';
+}
+document.getElementById('step').onclick = stepOnce;
+document.getElementById('run').onclick = ()=>{ let g=0; while(!st.finished && g++<200) stepOnce(); };
+document.getElementById('reset').onclick = reset;
+srcSel.onchange = dstSel.onchange = reset;
+reset();
+</script>
+</body>
+</html>

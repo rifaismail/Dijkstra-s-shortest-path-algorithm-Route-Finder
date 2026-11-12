@@ -1,0 +1,24 @@
+=== CAMPUS ROUTE FINDER (Dijkstra's Algorithm) ===
+
+Shortest distances from Main Gate:
+  Main Gate        0 m
+  Admin Block      150 m
+  Library          270 m
+  IT Block         370 m
+  Canteen          470 m
+  Auditorium       550 m
+  Hostel           610 m
+  Sports Complex   770 m
+
+Route Main Gate -> Hostel
+  Path    : Main Gate -> Admin Block -> Library -> Canteen -> Hostel
+  Distance: 610 m
+
+Route Admin Block -> Sports Complex
+  Path    : Admin Block -> Library -> IT Block -> Auditorium -> Sports Complex
+  Distance: 620 m
+
+Route Library -> Auditorium
+  Path    : Library -> IT Block -> Auditorium
+  Distance: 280 m
+
